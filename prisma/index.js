@@ -3,15 +3,24 @@ const bcrypt = require("bcrypt")
 const { PrismaClient } = require("@prisma/client")
 const prisma = new PrismaClient()
 const express = require("express")
-const { authenticate } = require("./db")
+const { authenticate, findUserWithToken } = require("./db")
 const app = express()
 const port = process.env.PORT || 3000
 
 app.use(express.json())
 app.use(require("morgan")("dev"))
 
+// Verify user is logged in with a jsonwebtoken
+const isLoggedIn = async (req, res, next) => {
+  try {
+    req.user = await findUserWithToken(req.headers.authorization)
+    next()
+  } catch (error) {
+    next(error)
+  }
+}
 
-// Get All Items
+// Fetch all items
 app.get("/api/items", async (req, res, next) => {
   try {
     const response = await prisma.item.findMany({
@@ -26,16 +35,16 @@ app.get("/api/items", async (req, res, next) => {
   }
 })
 
-// Get One Item
-app.get("/api/items/:item_id", async (req, res, next) => {
+// Fetch one item
+app.get("/api/items/:itemId", async (req, res, next) => {
   try {
-    const { item_id } = req.params
+    const { itemId } = req.params
     let response = await prisma.item.findMany({
       include: {
         reviews: true
       },
       where:{
-        id: item_id
+        id: itemId
       }
     })
     const aggregations = await prisma.review.aggregate({
@@ -52,7 +61,7 @@ app.get("/api/items/:item_id", async (req, res, next) => {
   }
 })
 
-// Create New User
+// Create new user
 app.post("/api/users", async (req, res, next) => {
   try {
     const { username, password } = req.body
@@ -71,11 +80,91 @@ app.post("/api/users", async (req, res, next) => {
 
 
 // Login and recieve JWT token
-
 app.post("/api/auth/login", async (req, res, next) => {
   try {
     res.send(await authenticate(req.body))
     await prisma.$disconnect()
+  } catch (error) {
+    next(error)
+  }
+})
+
+// Create a review
+app.post("/api/users/:userId/reviews", isLoggedIn, async (req, res, next) => {
+  try {
+    const { userId } = req.params
+    const { body, score, itemId } = req.body
+    const response = await prisma.review.create({
+      data: {
+        body: body,
+        score: score,
+        user: {
+          connect: {
+            id: userId
+          }
+        },
+        item: {
+          connect: {
+            id: itemId
+          }
+        }
+      }
+    })
+    res.send(response)
+    await prisma.$disconnect()
+  } catch (error) {
+    next(error)
+  }
+})
+
+// Fetch all reviews of logged in user
+app.get("/api/users/:userId/reviews", isLoggedIn, async (req, res, next) => {
+  try {
+    const { userId } = req.params
+    const response = await prisma.review.findMany({
+      include: {
+        comments: true
+      },
+      where: {
+        userId: userId
+      }
+    })
+    res.send(response)
+  } catch (error) {
+    next(error)
+  }
+})
+
+// Delete a review of logged in user
+app.delete("/api/users/:userId/reviews/:id", isLoggedIn, async (req, res, next) => {
+  try {
+    const { userId, id } = req.params
+    const response = await prisma.review.delete({
+      where: {
+        id: id
+      }
+    })
+    res.sendStatus(204)
+  } catch (error) {
+    next(error)
+  }
+})
+
+// Update a review of logged in user
+app.put("/api/users/:userId/reviews/:id", isLoggedIn, async (req, res, next) => {
+  try {
+    const { userId, id } = req.params
+    const { body, score } = req.body
+    const response = await prisma.review.update({
+      where: {
+        id: id
+      },
+      data: {
+        body: body,
+        score: score
+      }
+    })
+    res.send(response)
   } catch (error) {
     next(error)
   }
