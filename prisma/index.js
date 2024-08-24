@@ -170,6 +170,87 @@ app.put("/api/users/:userId/reviews/:id", isLoggedIn, async (req, res, next) => 
   }
 })
 
+// Create a comment
+app.post("/api/users/:userId/comments", isLoggedIn, async (req, res, next) => {
+  try {
+    const { userId } = req.params
+    const { body, reviewId } = req.body
+    const response = await prisma.comment.create({
+      data: {
+        body: body,
+        user: {
+          connect: {
+            id: userId
+          }
+        },
+        review: {
+          connect: {
+            id: reviewId
+          }
+        }
+      }
+    })
+    res.send(response)
+    await prisma.$disconnect()
+  } catch (error) {
+    next(error)
+  }
+})
+
+// Fetch all comments of logged in user
+app.get("/api/users/:userId/comments", isLoggedIn, async (req, res, next) => {
+  try {
+    const { userId } = req.params
+    const response = await prisma.comment.findMany({
+      where: {
+        userId: userId
+      },
+      include: {
+        review: true
+      }
+    })
+    res.send(response)
+    await prisma.$disconnect()
+  } catch (error) {
+    next(error)
+  }
+})
+
+// Delete a comment of logged in user
+app.delete("/api/users/:userId/comments/:id", isLoggedIn, async (req, res, next) => {
+  try {
+    const { userId, id } = req.params
+    const response = await prisma.comment.delete({
+      where: {
+        id: id
+      }
+    })
+    res.sendStatus(204)
+  } catch (error) {
+    next(error)
+  }
+})
+
+// Update a comment of logged in user
+app.put("/api/users/:userId/comments/:id", isLoggedIn, async (req, res, next) => {
+  try {
+    const { userId, id } = req.params
+    const { body } = req.body
+    const response = await prisma.comment.update({
+      where: {
+        id: id
+      },
+      data: {
+        body: body
+      }
+    })
+    res.send(response)
+  } catch (error) {
+    next(error)
+  }
+})
+
+
 const init = async () => {
   await prisma.comment.deleteMany({})
   await prisma.review.deleteMany({})
