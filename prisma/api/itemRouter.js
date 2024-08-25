@@ -11,7 +11,7 @@ itemRouter.get("/", async (req, res, next) => {
         reviews: true
       }
     })
-    res.send(response[0])
+    res.send(response)
     await prisma.$disconnect()
   } catch (error) {
     next(error)

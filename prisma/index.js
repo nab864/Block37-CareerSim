@@ -1,10 +1,10 @@
-const bcrypt = require("bcrypt")
-
 const { PrismaClient } = require("@prisma/client")
 const prisma = new PrismaClient()
 const express = require("express")
+const { faker } = require("@faker-js/faker")
 const app = express()
-const { authenticate, findUserWithToken } = require("./db")
+const bcrypt = require("bcrypt")
+
 const port = process.env.PORT || 3000
 
 app.use(express.json())
@@ -22,13 +22,15 @@ const init = async () => {
   await prisma.item.deleteMany({})
   await prisma.type.deleteMany({})
 
-  const users = await prisma.user.createManyAndReturn({
-    data: [
-      {username: "Kai", password: await bcrypt.hash("1234", 5)},
-      {username: "Ryan", password: await bcrypt.hash("5678", 5)}
-    ]
-  })
-
+  const users = []
+  for (let i=0; i<=10; i++) {
+    const user = await prisma.user.create({
+      data: {
+        username: await faker.internet.userName(), password: await bcrypt.hash(await faker.internet.password(), 5)
+      }
+    })
+    users.push(user)
+  }
 
   const types = await prisma.type.createManyAndReturn({
     data: [
@@ -39,51 +41,61 @@ const init = async () => {
     ]
   })
 
-
-  const items = await prisma.item.create({
-    data: {
-      name: "McDonalds",
-      description: "Yummy Mcdonalds",
-      type: {
-        connect: {
-          id: types[1].id
+  const items = []
+  for (let i=0; i<=10; i++) {
+    const item = await prisma.item.create({
+      data: {
+        name: faker.commerce.productName(),
+        description: faker.commerce.productDescription(),
+        type: {
+          connect: {
+            id: types[Math.floor(Math.random() * 4)].id
+          }
         }
       }
-    }
-  })
+    })
+    items.push(item)
+  }
 
-  const reviews = await prisma.review.create({
-    data: {
-      body: "This is phenomenal",
-      score: 10,
-      user: {
-        connect: {
-          id: users[1].id
-        }
-      },
-      item: {
-        connect: {
-          id: items.id
+  const reviews = []
+  for (let i=0; i<=10; i++) {
+    const review = await prisma.review.create({
+      data: {
+        body: faker.lorem.paragraph(),
+        score: Math.floor(Math.random() * 11),
+        user: {
+          connect: {
+            id: users[i].id
+          }
+        },
+        item: {
+          connect: {
+            id: items[Math.floor(Math.random() * 10)].id
+          }
         }
       }
-    }
-  })
+    })
+    reviews.push(review)
+  }
 
-  const comments = await prisma.comment.create({
-    data: {
-      body: "This review is trash",
-      user: {
-        connect: {
-          id: users[1].id
-        }
-      },
-      review: {
-        connect: {
-          id: reviews.id
+  for (let i=0; i<=10; i++) {
+    await prisma.comment.create({
+      data: {
+        body: faker.lorem.paragraph(),
+        user: {
+          connect: {
+            id: users[i].id
+          }
+        },
+        review: {
+          connect: {
+            id: reviews[Math.floor(Math.random() * 10)].id
+          }
         }
       }
-    }
-  })
+    })
+
+  }
 
   await prisma.$disconnect()
   console.log("Database Seeded")

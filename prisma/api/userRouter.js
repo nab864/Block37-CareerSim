@@ -23,7 +23,6 @@ userRouter.post("/", async (req, res, next) => {
   }
 })
 
-
 // Login and recieve JWT token
 userRouter.post("/login", async (req, res, next) => {
   try {
