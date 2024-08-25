@@ -16,7 +16,7 @@ datasource db {
 model User {
   id String @id @default(uuid())
   username String @unique
-  password String @unique
+  password String
   comments Comment[]
   reviews Review[]
 }
@@ -25,7 +25,7 @@ model Item {
   id String @id @default(uuid())
   name String @unique
   description String
-  type Type @relation(fields: [typeId], references: [id])
+  type Type @relation(fields: [typeId], references: [id], onDelete: Cascade)
   typeId String
   reviews Review[]
 }
@@ -39,9 +39,9 @@ model Type {
 model Comment {
   id String @id @default(uuid())
   body String
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
-  review Review @relation(fields: [reviewId], references: [id])
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
   reviewId String
 }
 
@@ -54,4 +54,6 @@ model Review {
   item Item @relation(fields: [itemId], references: [id])
   itemId String
   comments Comment[]
+
+  @@unique([userId, itemId])
 }

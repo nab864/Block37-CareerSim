@@ -47,5 +47,14 @@ const findUserWithToken = async(token)=> {
   return response;
 }
 
+// Verify user is logged in with a jsonwebtoken
+const isLoggedIn = async (req, res, next) => {
+  try {
+    req.user = await findUserWithToken(req.headers.authorization)
+    next()
+  } catch (error) {
+    next(error)
+  }
+}
 
-module.exports = { authenticate, findUserWithToken }
+module.exports = { authenticate, findUserWithToken, isLoggedIn }
